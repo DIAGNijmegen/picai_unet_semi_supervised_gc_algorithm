@@ -161,18 +161,20 @@ class csPCaAlgorithm(SegmentationAlgorithm):
 
         print("Preprocessing Images ...")
 
-        # read images (axial sequences used for this example only)
-        sitk_img = [sitk.ReadImage(str(x)) for x in self.image_input_paths]
+        # load images (axial sequences used for this example only)
+        sample = Sample(
+            scans=[
+                sitk.ReadImage(str(path))
+                for path in self.image_input_paths
+            ],
+            settings=PreprocessingSettings(matrix_size=img_spec['image_shape'], spacing=img_spec['spacing']),
+        )
 
-        # preprocessing - resample spatial resolution
-        resamp_img = [
-            sitk.GetArrayFromImage(resample_img(x, out_spacing=self.img_spec['spacing']))
-            for x in sitk_img
-        ]
-
-        # preprocessing - center crop
+        # preprocess - align, center-crop, resample
+        sample.preprocess()
         cropped_img = [
-            crop_or_pad(x, size=self.img_spec['image_shape']) for x in resamp_img
+            sitk.GetArrayFromImage(x)
+            for x in sample.scans
         ]
 
         # preprocessing - intensity normalization + expand channel dim
@@ -211,6 +213,9 @@ class csPCaAlgorithm(SegmentationAlgorithm):
                     for x in img_for_pred
                 ]
 
+                # revert horizontally flipped tta image
+                preds[1] = np.flip(preds[1], [3])
+
                 # gaussian blur to counteract checkerboard artifacts in
                 # predictions from the use of transposed conv. in the U-Net
                 outputs += [
@@ -223,8 +228,12 @@ class csPCaAlgorithm(SegmentationAlgorithm):
         # ensemble softmax predictions
         ensemble_output = np.mean(outputs, axis=0).astype('float32')
 
-        # translate softmax prediction to original axial T2-weighted scan
-        
+        # read and resample images (used for reverting predictions only)
+        sitk_img = [sitk.ReadImage(str(x)) for x in self.image_input_paths]
+        resamp_img = [
+            sitk.GetArrayFromImage(resample_img(x, out_spacing=self.img_spec['spacing']))
+            for x in sitk_img
+        ]
 
         # revert softmax prediction to original t2w - reverse center crop
         cspca_det_map_sitk: sitk.Image = sitk.GetImageFromArray(crop_or_pad(
@@ -249,7 +258,6 @@ class csPCaAlgorithm(SegmentationAlgorithm):
         # save case-level likelihood
         with open(str(self.case_level_likelihood_output_file), 'w') as f:
             json.dump(float(np.max(cspca_det_map_npy)), f)
-
 
 if __name__ == "__main__":
     csPCaAlgorithm().predict()

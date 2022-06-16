@@ -1,7 +1,4 @@
 **/*.tar.gz
-**/*.mha
-**/*.nii
-**/*.nii.gz
 **/*.mhd
 **/*.zraw
 
