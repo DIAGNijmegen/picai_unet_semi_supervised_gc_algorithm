@@ -169,7 +169,8 @@ class csPCaAlgorithm(SegmentationAlgorithm):
             ],
             settings=PreprocessingSettings(
                 matrix_size=self.img_spec['image_shape'], 
-                spacing=self.img_spec['spacing']),
+                spacing=self.img_spec['spacing']
+            )
         )
 
         # preprocess - align, center-crop, resample
@@ -249,6 +250,9 @@ class csPCaAlgorithm(SegmentationAlgorithm):
         # process softmax prediction to detection map
         cspca_det_map_npy = extract_lesion_candidates(
             sitk.GetArrayFromImage(cspca_det_map_sitk), threshold='dynamic')[0]
+
+        # remove (some) secondary concentric/ring detections
+        cspca_det_map_npy[cspca_det_map_npy<(np.max(cspca_det_map_npy)/5)] = 0
 
         # revert detection map to physical space of original axial T2W scan
         cspca_det_map_sitk = sitk.GetImageFromArray(cspca_det_map_npy)
