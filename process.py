@@ -168,8 +168,8 @@ class csPCaAlgorithm(SegmentationAlgorithm):
                 for path in self.image_input_paths
             ],
             settings=PreprocessingSettings(
-                matrix_size=img_spec['image_shape'], 
-                spacing=img_spec['spacing']),
+                matrix_size=self.img_spec['image_shape'], 
+                spacing=self.img_spec['spacing']),
         )
 
         # preprocess - align, center-crop, resample
