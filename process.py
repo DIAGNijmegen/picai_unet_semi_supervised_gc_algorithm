@@ -27,7 +27,7 @@ from picai_baseline.unet.training_setup.neural_network_selector import \
     neural_network_for_run
 from picai_baseline.unet.training_setup.preprocess_utils import z_score_norm
 from picai_prep.data_utils import atomic_image_write
-from picai_prep.preprocessing import crop_or_pad, resample_img
+from picai_prep.preprocessing import Sample, PreprocessingSettings, crop_or_pad, resample_img
 from report_guided_annotation import extract_lesion_candidates
 from scipy.ndimage import gaussian_filter
 
@@ -161,13 +161,15 @@ class csPCaAlgorithm(SegmentationAlgorithm):
 
         print("Preprocessing Images ...")
 
-        # load images (axial sequences used for this example only)
+        # read images (axial sequences used for this example only)
         sample = Sample(
             scans=[
                 sitk.ReadImage(str(path))
                 for path in self.image_input_paths
             ],
-            settings=PreprocessingSettings(matrix_size=img_spec['image_shape'], spacing=img_spec['spacing']),
+            settings=PreprocessingSettings(
+                matrix_size=img_spec['image_shape'], 
+                spacing=img_spec['spacing']),
         )
 
         # preprocess - align, center-crop, resample
@@ -229,7 +231,7 @@ class csPCaAlgorithm(SegmentationAlgorithm):
         ensemble_output = np.mean(outputs, axis=0).astype('float32')
 
         # read and resample images (used for reverting predictions only)
-        sitk_img = [sitk.ReadImage(str(x)) for x in self.image_input_paths]
+        sitk_img = [sitk.ReadImage(str(path)) for path in self.image_input_paths]
         resamp_img = [
             sitk.GetArrayFromImage(resample_img(x, out_spacing=self.img_spec['spacing']))
             for x in sitk_img
