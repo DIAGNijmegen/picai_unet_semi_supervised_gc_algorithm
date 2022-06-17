@@ -52,8 +52,11 @@ class csPCaAlgorithm(SegmentationAlgorithm):
         # set expected i/o paths in gc env (image i/p, algorithms, prediction o/p)
         # see grand-challenge.org/algorithms/interfaces/ for expected path per i/o interface
         # note: these are fixed paths that should not be modified
+
+        # directory to model weights
         self.algorithm_weights_dir = Path("/opt/algorithm/weights/")
 
+        # path to image files
         self.image_input_dirs = [
             "/input/images/transverse-t2-prostate-mri/",
             "/input/images/transverse-adc-prostate-mri/",
@@ -63,11 +66,12 @@ class csPCaAlgorithm(SegmentationAlgorithm):
         ]
         self.image_input_paths = [list(Path(x).glob("*.mha"))[0] for x in self.image_input_dirs]
 
+        # load clinical information
         with open("/input/clinical-information-prostate-mri.json") as fp:
             self.clinical_info = json.load(fp)
 
+        # path to output files
         self.detection_map_output_path = Path("/output/images/cspca-detection-map/cspca_detection_map.mha")
-
         self.case_level_likelihood_output_file = Path("/output/cspca-case-level-likelihood.json")
 
         # create output directory
@@ -232,9 +236,13 @@ class csPCaAlgorithm(SegmentationAlgorithm):
         ensemble_output = np.mean(outputs, axis=0).astype('float32')
 
         # read and resample images (used for reverting predictions only)
-        sitk_img = [sitk.ReadImage(str(path)) for path in self.image_input_paths]
+        sitk_img = [
+            sitk.ReadImage(str(path)) for path in self.image_input_paths
+        ]
         resamp_img = [
-            sitk.GetArrayFromImage(resample_img(x, out_spacing=self.img_spec['spacing']))
+            sitk.GetArrayFromImage(
+                resample_img(x, out_spacing=self.img_spec['spacing'])
+            )
             for x in sitk_img
         ]
 
